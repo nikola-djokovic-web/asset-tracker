@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\AssetAssignment;
 
 class Asset extends Model
 {
@@ -29,5 +32,15 @@ class Asset extends Model
     public function itemable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(AssetAssignment::class);
+    }
+
+    public function currentAssignment(): HasOne
+    {
+        return $this->hasOne(AssetAssignment::class)->whereNull('returned_at');
     }
 }

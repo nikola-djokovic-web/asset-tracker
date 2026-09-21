@@ -37,7 +37,7 @@ class AssetPolicy
      */
     public function update(User $user, Asset $asset): bool
     {
-        return user->tenant_id === $asset->tenant_id;
+        return $user->tenant_id === $asset->tenant_id;
     }
 
     /**
@@ -45,7 +45,7 @@ class AssetPolicy
      */
     public function delete(User $user, Asset $asset): bool
     {
-        return user->tenant_id === $asset->tenant_id;
+        return $user->tenant_id === $asset->tenant_id;
     }
 
    

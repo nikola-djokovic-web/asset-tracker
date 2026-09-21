@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\TenantController;
+use App\Http\Controllers\Api\AssetAssignmentController;
 
 // Javne rute (Public)
 Route::post('/register', [AuthController::class, 'register']);
@@ -27,4 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/tenant', [TenantController::class, 'show']);
     Route::put('/tenant', [TenantController::class, 'update']);
+
+    Route::post('/assets/{asset}/checkout', [AssetAssignmentController::class, 'checkout']);
+    Route::post('/assets/{asset}/checkin', [AssetAssignmentController::class, 'checkin']);
 });
