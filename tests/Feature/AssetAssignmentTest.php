@@ -123,3 +123,54 @@ test('user cannot checkout asset belonging to another tenant', function () {
     // Route model binding ili policy vraća 404/403 za nepostojeći resurs u sklopu tenanta
     $response->assertStatus(404);
 });
+
+test('can fetch assignment history for an asset', function () {
+    $tenant = Tenant::factory()->create();
+    $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+    $assignee = User::factory()->create(['tenant_id' => $tenant->id]);
+    $asset = Asset::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status'    => 'active',
+    ]);
+
+    Sanctum::actingAs($admin);
+
+    // Kreiramo jedno zaduženje
+    $this->postJson("/api/assets/{$asset->id}/checkout", [
+        'assigned_to_user_id' => $assignee->id,
+        'notes'               => 'Test zaduženje.',
+    ]);
+
+    // Pozivamo endpoint za istoriju
+    $response = $this->getJson("/api/assets/{$asset->id}/assignments");
+
+    $response->assertStatus(200)
+             ->assertJsonCount(1, 'data')
+             ->assertJsonPath('data.0.asset_id', $asset->id)
+             ->assertJsonPath('data.0.assigned_to.id', $assignee->id)
+             ->assertJsonPath('data.0.is_active', true);
+});
+
+test('can fetch assignment history for a user', function () {
+    $tenant = Tenant::factory()->create();
+    $admin = User::factory()->create(['tenant_id' => $tenant->id]);
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
+    $asset = Asset::factory()->create([
+        'tenant_id' => $tenant->id,
+        'status'    => 'active',
+    ]);
+
+    Sanctum::actingAs($admin);
+
+    // Zadužujemo aset korisniku
+    $this->postJson("/api/assets/{$asset->id}/checkout", [
+        'assigned_to_user_id' => $user->id,
+    ]);
+
+    // Pozivamo endpoint za zaduženja korisnika
+    $response = $this->getJson("/api/users/{$user->id}/assignments");
+
+    $response->assertStatus(200)
+             ->assertJsonCount(1, 'data')
+             ->assertJsonPath('data.0.assigned_to.id', $user->id);
+});

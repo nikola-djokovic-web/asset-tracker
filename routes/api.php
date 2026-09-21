@@ -32,4 +32,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/assets/{asset}/checkout', [AssetAssignmentController::class, 'checkout']);
     Route::post('/assets/{asset}/checkin', [AssetAssignmentController::class, 'checkin']);
+
+    Route::get('/assets/{asset}/assignments', [AssetAssignmentController::class, 'historyForAsset']);
+    Route::get('/users/{user}/assignments', [AssetAssignmentController::class, 'assignmentsForUser']);
+
 });

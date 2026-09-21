@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckinAssetRequest;
 use App\Http\Requests\CheckoutAssetRequest;
 use App\Models\Asset;
+use App\Models\User;
 use App\Models\AssetAssignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use App\Http\Resources\AssetAssignmentResource;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class AssetAssignmentController extends Controller
 {
@@ -82,6 +85,36 @@ class AssetAssignmentController extends Controller
         return response()->json([
             'message' => 'Asset uspesno razduzen.'
         ], 200);
+    }
+
+    /**
+     * Istorija svih zaduženja za konkretan aset.
+     */
+    public function historyForAsset(Asset $asset): AnonymousResourceCollection
+    {
+        Gate::authorize('view', $asset);
+
+        $assignments = $asset->assignments()
+            ->with(['assignedTo', 'assignedBy'])
+            ->latest('assigned_at')
+            ->paginate(15);
+
+        return AssetAssignmentResource::collection($assignments);
+    }
+
+    /**
+     * Sva zaduženja (aktivna i prošla) za određenog korisnika unutar tenanta.
+     */
+    public function assignmentsForUser(User $user): AnonymousResourceCollection
+    {
+        Gate::authorize('view', $user);
+
+        $assignments = AssetAssignment::where('assigned_to_user_id', $user->id)
+            ->with(['asset', 'assignedBy'])
+            ->latest('assigned_at')
+            ->paginate(15);
+
+        return AssetAssignmentResource::collection($assignments);
     }
 
 }
