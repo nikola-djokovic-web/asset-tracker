@@ -20,11 +20,63 @@ class AssetController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): AnonymousResourceCollection
+   public function index(Request $request)
     {
-       $assets = Asset::with(['category', 'organization'])->paginate(10);
+        $query = Asset::query()
+            ->with(['category', 'itemable']);
 
-        return AssetResource::collection($assets);
+        // 1. Pretraga (name, asset_tag, serial_number)
+        if ($request->filled('search')) {
+            $search = strtolower($request->input('search'));
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                ->orWhereRaw('LOWER(asset_tag) LIKE ?', ["%{$search}%"])
+                ->orWhereHasMorph(
+                    'itemable',
+                    [\App\Models\HardwareDetail::class],
+                    function ($subQuery) use ($search) {
+                        $subQuery->whereRaw('LOWER(serial_number) LIKE ?', ["%{$search}%"]);
+                    }
+                );
+            });
+        }
+
+        // 2. Filter po statusu
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        // 3. Filter po kategoriji
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->input('category_id'));
+        }
+
+        // 4. Filter po tipu (Hardware vs License)
+        if ($request->filled('type')) {
+            $type = $request->input('type');
+            if ($type === 'hardware') {
+                $query->where('itemable_type', 'like', '%HardwareDetail%');
+            } elseif ($type === 'license') {
+                $query->where('itemable_type', 'like', '%LicenseDetail%');
+            }
+        }
+
+        // 5. Sortiranje
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = strtolower($request->input('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $allowedSortFields = ['name', 'asset_tag', 'status', 'created_at'];
+        if (in_array($sortBy, $allowedSortFields)) {
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        // 6. Paginacija
+        $perPage = (int) $request->input('per_page', 15);
+        $perPage = min(max($perPage, 1), 100);
+
+        return AssetResource::collection($query->paginate($perPage));
     }
 
     /**

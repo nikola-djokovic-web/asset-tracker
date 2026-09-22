@@ -19,7 +19,20 @@ class UserController extends Controller
     {
         Gate::authorize('viewAny', User::class);
 
-        $users = User::where('tenant_id', $request->user()->tenant_id)->latest()->paginate(15);
+        $users = User::query()
+            ->where('tenant_id', $request->user()->tenant_id)
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = strtolower($request->input('search'));
+                $q->where(function ($sub) use ($search) {
+                    $sub->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                        ->orWhereRaw('LOWER(email) LIKE ?', ["%{$search}%"]);
+                });
+            })
+            ->when($request->filled('role'), function ($q) use ($request) {
+                $q->where('role', $request->input('role'));
+            })
+            ->orderBy('name', 'asc')
+            ->paginate($request->input('per_page', 15));
 
         return UserResource::collection($users);
     }
@@ -69,9 +82,15 @@ class UserController extends Controller
         ]);
     }
 
-    public function destroy(User $user): JsonResponse
+    public function destroy(Request $request, User $user): JsonResponse
     {
         Gate::authorize('delete', $user);
+
+        if ($request->user()->id === $user->id) {
+            return response()->json([
+                'message' => 'You cannot delete your own account.',
+            ], 422);
+        }
 
         $user->delete();
 

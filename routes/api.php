@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\AssetAssignmentController;
+use App\Http\Controllers\Api\DashboardController;
 
 // Javne rute (Public)
 Route::post('/register', [AuthController::class, 'register']);
@@ -36,4 +37,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/assets/{asset}/assignments', [AssetAssignmentController::class, 'historyForAsset']);
     Route::get('/users/{user}/assignments', [AssetAssignmentController::class, 'assignmentsForUser']);
 
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 });
