@@ -14,6 +14,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use App\Http\Requests\StoreAssetRequest;
 use Illuminate\Support\Facades\Gate;
+use App\Http\Requests\UpdateAssetRequest;
 
 class AssetController extends Controller
 {
@@ -127,9 +128,9 @@ class AssetController extends Controller
     {
        Gate::authorize('view', $asset);
 
-       return response()->json([
-            'asset' => new AssetResource($asset->load(['category', 'organization', 'itemable'])),
-        ]);
+       $asset->load(['category', 'itemable']);
+
+        return new AssetResource($asset);
     }
 
     /**
@@ -139,11 +140,29 @@ class AssetController extends Controller
     {
         Gate::authorize('update', $asset);
 
-        $asset->update($request->validated());
+        $validated = $request->validated();
+
+        // 1. Ažuriranje samog Asset-a
+        $assetFields = array_intersect_key($validated, array_flip([
+            'name', 'asset_tag', 'status', 'category_id', 'organization_id'
+        ]));
+
+        if (!empty($assetFields)) {
+            $asset->update($assetFields);
+        }
+
+        // 2. Ažuriranje ugnježdenih detalja na HardwareDetail/LicenseDetail
+        if (isset($validated['details']) && $asset->itemable) {
+            $asset->itemable->update($validated['details']);
+        }
+
+        // 3. Osvežavanje iz baze radi vršenja uvid u nove podatke
+        $asset->refresh();
+        $asset->load(['category', 'itemable']);
 
         return response()->json([
             'message' => 'Asset updated successfully',
-            'asset'   => new AssetResource($asset->fresh()),
+            'data'    => new AssetResource($asset),
         ]);
     }
 

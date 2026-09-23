@@ -11,6 +11,8 @@ class HardwareDetail extends Model
 {
     use HasUlids, HasFactory;
 
+    protected $guarded = [];
+
     protected $fillable = ['serial_number', 'specs'];
 
     protected $casts = [

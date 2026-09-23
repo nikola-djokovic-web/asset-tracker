@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -36,7 +37,7 @@ class AuthController extends Controller
                     'tenant_id' => $tenant->id,
                     'name' => $validated['name'],
                     'email' => $validated['email'],
-                    'password' => $validated['password'],
+                    'password' => Hash::make($validated['password']),
                 ]);
 
                 $token = $user->createToken('auth_token')->plainTextToken;
@@ -60,46 +61,36 @@ class AuthController extends Controller
      * Autentifikacija postojeceg korisnika
      */
 
-    public function login(Request $request){
-        // 1. Validacija ulaznih podataka
+    public function login(Request $request)
+    {
         $credentials = $request->validate([
             'email'    => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
-
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (!Auth::attempt($credentials)) {
             return response()->json([
-                'message' => 'Invalid credentials'
+                'message' => 'Neispravna email adresa ili lozinka.'
             ], 401);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $request->session()->regenerate();
 
         return response()->json([
-            'message'     => 'Login successful',
-            'access_token' => $token,
-            'token_type'   => 'Bearer',
-            'user'         => [
-                'id'        => $user->id,
-                'name'      => $user->name,
-                'email'     => $user->email,
-                'tenant_id' => $user->tenant_id,
-            ],
+            'message' => 'Uspesna prijava',
+            'user'    => Auth::user(),
         ]);
     }
 
-    /**
-     * Odjava korisnika i brisanje trenutnog tokena.
-     */
     public function logout(Request $request)
     {
-        // Briše samo token koji je iskorišćen za ovaj zahtev
-        $request->user()->currentAccessToken()->delete();
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json([
-            'message' => 'Logged out successfully'
+            'message' => 'Uspesna odjava'
         ]);
     }
 

@@ -15,15 +15,15 @@ class AssetResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'asset_tag' => $this->asset_tag,
-            'status' => $this->status,
-            'created_at' => $this->created_at,
-            'category'=> new CategoryResource($this->whenLoaded('category')),
-            'organization' => new OrganizationResource($this->whenLoaded('organization')),
-
-            'details' => $this->whenLoaded('itemable')
+            'id'              => $this->id,
+            'name'            => $this->name,
+            'asset_tag'       => $this->asset_tag,
+            'status'          => $this->status,
+            'category_id'     => $this->category_id,
+            'organization_id' => $this->organization_id,
+            'created_at'      => $this->created_at?->toIso8601String(),
+            'category'        => new CategoryResource($this->whenLoaded('category')),
+            'details'         => $this->whenLoaded('itemable'),
         ];
     }
 }

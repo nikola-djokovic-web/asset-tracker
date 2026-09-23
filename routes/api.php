@@ -10,15 +10,14 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\AssetAssignmentController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\AuditLogController;
 
 // Javne rute (Public)
+Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login'])->name('login');
-
 // Zaštićene rute (Protected)
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    
+    Route::post('/logout', [AuthController::class, 'logout']);    
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
@@ -38,4 +37,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/{user}/assignments', [AssetAssignmentController::class, 'assignmentsForUser']);
 
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    Route::get('/audit-logs', [AuditLogController::class, 'index']);
 });

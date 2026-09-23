@@ -4,6 +4,7 @@ use App\Models\Asset;
 use App\Models\HardwareDetail;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\AuditLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
@@ -68,4 +69,39 @@ test('can sort and paginate assets', function () {
              ->assertJsonCount(1, 'data')
              ->assertJsonPath('data.0.name', 'Alpha Asset')
              ->assertJsonPath('meta.per_page', 1);
+});
+
+test('updating an asset automatically creates an audit log entry', function () {
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
+
+    $asset = Asset::factory()->create([
+        'tenant_id' => $tenant->id,
+        'name'      => 'MacBook Pro 16 M3',
+        'status'    => 'active',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $response = $this->putJson("/api/assets/{$asset->id}", [
+        'name'   => 'MacBook Pro 16 M4',
+        'status' => 'active',
+    ]);
+
+    $response->assertStatus(200);
+
+    // Provera da li je kreiran audit log zapis
+    $this->assertDatabaseHas('audit_logs', [
+        'tenant_id'      => $tenant->id,
+        'user_id'        => $user->id,
+        'event'          => 'updated',
+        'auditable_type' => Asset::class,
+        'auditable_id'   => $asset->id,
+    ]);
+
+    $log = AuditLog::where('auditable_id', $asset->id)->latest()->first();
+
+    expect($log)->not->toBeNull();
+    expect($log->old_values)->toHaveKey('name', 'MacBook Pro 16 M3');
+    expect($log->new_values)->toHaveKey('name', 'MacBook Pro 16 M4');
 });
